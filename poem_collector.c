@@ -21,9 +21,19 @@ void run(const char *filename)
     Poem *poem;
     int id, inputValue, status, childNum = 4, childsInitValue = 0;
     int fd[2];
+    int poems[2];
+    int selectedPoem;
+    int randomPoems[2];
+    int poemNumber;
     pid_t childs[childNum];
     pid_t pid;
     pid_t parent = getpid();
+
+    if (pipe(fd) == -1)
+    {
+        PipeException();
+    }
+
     while (running)
     {
         printf("%s", MENU_TEXT);
@@ -116,7 +126,7 @@ void run(const char *filename)
             {
                 childs[i] = fork();
                 if (childs[i] < 0)
-                    ForkExeption();
+                    ForkException();
 
                 if (childs[i] == 0)
                 {
@@ -128,17 +138,46 @@ void run(const char *filename)
 
             if (getpid() == childs[selectedChildIndex]) // selected child
             {
+                close(fd[1]);
                 usleep(500000);
                 printf("The fittest boy left home. (%d)\n", childs[selectedChildIndex]);
                 sleep(1);
                 printf("The fittest boy arrived at Barátfa\n");
                 usleep(500000);
+                read(fd[0], poems, sizeof(int));
+                read(fd[0], poems+1, sizeof(int));
+                close(fd[0]);
+                printf("1. Poem:\n");
+                poem = readFromFile(filename, poems[0], separator);
+                printPoem(poem);
+                freePoem(poem);
 
+                printf("\n");
 
+                printf("2. Poem:\n");
+                poem = readFromFile(filename, poems[1], separator);
+                printPoem(poem);
+                freePoem(poem);
+
+                printf("\n");
+
+                selectedPoem = poems[(int)rand() % 2];
+                printf("Selected poem:\n");
+                poem = readFromFile(filename, selectedPoem, separator);
+                printPoem(poem);
+                freePoem(poem);
             }
 
             if(getpid() == parent) { // parent
+                close(fd[0]);
+                poemNumber = getNumberOfPoems(filename, separator);
                 
+                printf("poem number: %d\n", poemNumber);
+                randomPoems[0] = (int)rand() % (poemNumber+1) + 1;
+                write(fd[1], randomPoems, sizeof(int));
+                randomPoems[1] = (int)rand() % (poemNumber+1) + 1;
+                write(fd[1], randomPoems + 1, sizeof(int));
+                close(fd[1]);
             }
             else { // childs
                 exit(0);
@@ -283,8 +322,13 @@ void IOException()
     abort();
 }
 
-void ForkExeption()
+void ForkException()
 {
+    printf("Fork error");
+    abort();
+}
+
+void PipeException() {
     printf("Fork error");
     abort();
 }

@@ -12,5 +12,6 @@ int createFile(const char* filename);
 int safeToFile(const char* filename, const Poem* poem, const char* separator);
 Poem* readFromFile(const char* filename, const int poemId, const char* separator);
 Poem* deleteFromFile(const char* filename, const int poemId, const char* separator);
+int getNumberOfPoems(const char *filename, const char *separator);
 
 #endif

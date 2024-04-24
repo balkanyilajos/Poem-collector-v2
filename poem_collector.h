@@ -23,6 +23,7 @@ bool any(int* arr, int size, int value);
 
 void MemoryAllocationException(void);
 void IOException(void);
-void ForkExeption(void);
+void ForkException(void);
+void PipeException(void);
 
 #endif
