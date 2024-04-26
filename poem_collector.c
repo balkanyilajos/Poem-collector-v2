@@ -11,7 +11,7 @@ static const char *MENU_TEXT = "--------------------------\n"
                                "--------------------------\n"
                                "Write here your command: ";
 
-void run(const char *filename)
+void run(const char *filename, const char* rootPath)
 {
     setTimer();
     bool running = true;
@@ -28,6 +28,8 @@ void run(const char *filename)
     pid_t childs[childNum];
     pid_t pid;
     pid_t parent = getpid();
+    key_t key = ftok(rootPath, 1);
+    int messageID = msgget(key, 0600 | IPC_CREAT);
 
     if (pipe(fd) == -1)
     {
@@ -122,6 +124,7 @@ void run(const char *filename)
             freePoem(poem);
             break;
         case 6:
+            signal(SIGUSR1, arriveHandler);
             for (int i = 0; i < childNum; i++)
             {
                 childs[i] = fork();
@@ -142,21 +145,23 @@ void run(const char *filename)
                 usleep(500000);
                 printf("The fittest boy left home. (%d)\n", childs[selectedChildIndex]);
                 sleep(1);
-                printf("The fittest boy arrived at Barátfa\n");
+                printf("The fittest boy arrived at Barátfa. \n");
+                printf("Sent signal...\n");
+                kill(getppid(), SIGUSR1);
                 usleep(500000);
                 read(fd[0], poems, sizeof(int));
                 read(fd[0], poems+1, sizeof(int));
                 close(fd[0]);
                 printf("1. Poem:\n");
                 poem = readFromFile(filename, poems[0], separator);
-                printPoem(poem);
+                printTitle(poem);
                 freePoem(poem);
 
                 printf("\n");
 
                 printf("2. Poem:\n");
                 poem = readFromFile(filename, poems[1], separator);
-                printPoem(poem);
+                printTitle(poem);
                 freePoem(poem);
 
                 printf("\n");
@@ -164,20 +169,35 @@ void run(const char *filename)
                 selectedPoem = poems[(int)rand() % 2];
                 printf("Selected poem:\n");
                 poem = readFromFile(filename, selectedPoem, separator);
-                printPoem(poem);
+
+                sendPoem(messageID, selectedPoem);
+                printf("Message sent to parent...\n");
+                usleep(500000);
+                kill(getppid(), SIGUSR1);
+                usleep(1000000);
+                printf("The selected poem was recited by the child.\n");
+                printTitle(poem);
                 freePoem(poem);
             }
 
             if(getpid() == parent) { // parent
+                pause();
+                printf("Arrived signal...\n");
                 close(fd[0]);
                 poemNumber = getNumberOfPoems(filename, separator);
                 
-                printf("poem number: %d\n", poemNumber);
-                randomPoems[0] = (int)rand() % (poemNumber+1) + 1;
+                printf("Number of poems: %d\n", poemNumber);
+                randomPoems[0] = (int)rand() % (poemNumber) + 1;
                 write(fd[1], randomPoems, sizeof(int));
-                randomPoems[1] = (int)rand() % (poemNumber+1) + 1;
+                randomPoems[1] = (int)rand() % (poemNumber) + 1;
                 write(fd[1], randomPoems + 1, sizeof(int));
                 close(fd[1]);
+                
+                pause();
+                selectedPoem = receivePoem(messageID);
+                usleep(500000);
+                printf("The sent poem arrived from child (ID: %d).\n", selectedPoem);
+                
             }
             else { // childs
                 exit(0);
@@ -295,6 +315,8 @@ void setTimer()
 {
     srand(time(NULL));
 }
+
+void arriveHandler(int signum) {}
 
 bool any(int *arr, int size, int value)
 {

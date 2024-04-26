@@ -12,13 +12,15 @@
 #include <unistd.h>
 #include <sched.h>
 #include <sys/wait.h>
+#include <signal.h>
 
-void run(const char* filename);
+void run(const char *filename, const char* rootPath);
 Poem* readPoemFromConsole(void);
 int readNumberFromConsole(void);
 char* readStringFromConsole(char end);
 void trim(char* str);
 void setTimer(void);
+void arriveHandler(int signum);
 bool any(int* arr, int size, int value);
 
 void MemoryAllocationException(void);
